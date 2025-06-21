@@ -325,36 +325,39 @@ class GameStore:
             )
 
             # Execute action based on type
-            if action_type == "fold":
-                player.status = PlayerStatus.FOLDED
-            elif action_type == "call":
-                call_amount = game.current_bet - player.current_bet
-                if player.chips >= call_amount:
-                    player.chips -= call_amount
-                    player.current_bet = game.current_bet
-                    game.pot += call_amount
-                else:
+            match action_type:
+                case "fold":
+                    player.status = PlayerStatus.FOLDED
+                case "call":
+                    call_amount = game.current_bet - player.current_bet
+                    if player.chips >= call_amount:
+                        player.chips -= call_amount
+                        player.current_bet = game.current_bet
+                        game.pot += call_amount
+                    else:
+                        return False
+                case "raise":
+                    if amount is None or amount < game.min_raise:
+                        return False
+                    total_needed = game.current_bet - player.current_bet + amount
+                    if player.chips >= total_needed:
+                        player.chips -= total_needed
+                        player.current_bet = game.current_bet + amount
+                        game.pot += total_needed
+                        game.current_bet = player.current_bet
+                        game.min_raise = amount
+                    else:
+                        return False
+                case "all_in":
+                    all_in_amount = player.chips
+                    player.current_bet += all_in_amount
+                    game.pot += all_in_amount
+                    player.chips = 0
+                    player.status = PlayerStatus.ALL_IN
+                    if player.current_bet > game.current_bet:
+                        game.current_bet = player.current_bet
+                case _:
                     return False
-            elif action_type == "raise":
-                if amount is None or amount < game.min_raise:
-                    return False
-                total_needed = game.current_bet - player.current_bet + amount
-                if player.chips >= total_needed:
-                    player.chips -= total_needed
-                    player.current_bet = game.current_bet + amount
-                    game.pot += total_needed
-                    game.current_bet = player.current_bet
-                    game.min_raise = amount
-                else:
-                    return False
-            elif action_type == "all_in":
-                all_in_amount = player.chips
-                player.current_bet += all_in_amount
-                game.pot += all_in_amount
-                player.chips = 0
-                player.status = PlayerStatus.ALL_IN
-                if player.current_bet > game.current_bet:
-                    game.current_bet = player.current_bet
 
             # Update game state
             player.last_action = action

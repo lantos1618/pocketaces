@@ -112,56 +112,54 @@ class GameService:
     ) -> bool:
         """Apply an action to the game state"""
 
-        if action.action_type == ActionType.FOLD:
-            player.status = PlayerStatus.FOLDED
-            return True
+        match action.action_type:
+            case ActionType.FOLD:
+                player.status = PlayerStatus.FOLDED
+                return True
 
-        elif action.action_type == ActionType.CHECK:
-            # Check is always valid if no bet to call
-            return True
+            case ActionType.CHECK:
+                # Check is always valid if no bet to call
+                return True
 
-        elif action.action_type == ActionType.CALL:
-            call_amount = game.current_bet - player.current_bet
-            if player.chips < call_amount:
-                return False
+            case ActionType.CALL:
+                call_amount = game.current_bet - player.current_bet
+                if player.chips < call_amount:
+                    return False
 
-            player.chips -= call_amount
-            player.current_bet = game.current_bet
-            game.pot += call_amount
-            return True
+                player.chips -= call_amount
+                player.current_bet = game.current_bet
+                game.pot += call_amount
+                return True
 
-        elif action.action_type == ActionType.RAISE:
-            if action.amount is None or action.amount <= game.current_bet:
-                return False
+            case ActionType.RAISE:
+                if action.amount is None or action.amount <= game.current_bet:
+                    return False
 
-            raise_amount = action.amount - player.current_bet
-            if player.chips < raise_amount:
-                return False
+                raise_amount = action.amount - player.current_bet
+                if player.chips < raise_amount:
+                    return False
 
-            player.chips -= raise_amount
-            player.current_bet = action.amount
-            game.pot += raise_amount
-            game.current_bet = action.amount
-            game.min_raise = action.amount - game.current_bet
+                player.chips -= raise_amount
+                player.current_bet = action.amount
+                game.pot += raise_amount
+                game.current_bet = action.amount
+                game.min_raise = action.amount - game.current_bet
 
-            return True
+                return True
 
-        elif action.action_type == ActionType.ALL_IN:
-            all_in_amount = player.chips
-            player.current_bet += all_in_amount
-            game.pot += all_in_amount
-            player.chips = 0
-            player.status = PlayerStatus.ALL_IN
+            case ActionType.ALL_IN:
+                all_in_amount = player.chips
+                player.current_bet += all_in_amount
+                game.pot += all_in_amount
+                player.chips = 0
+                player.status = PlayerStatus.ALL_IN
 
-            # Update current bet if this is the highest
-            if player.current_bet > game.current_bet:
-                game.current_bet = player.current_bet
-                game.min_raise = player.current_bet - game.current_bet
+                # Update current bet if this is the highest
+                if player.current_bet > game.current_bet:
+                    game.current_bet = player.current_bet
+                    game.min_raise = player.current_bet - game.current_bet
 
-            return True
-
-        # Handle any unexpected action types
-        return False
+                return True
 
     async def _update_game_state(self, game: GameState) -> None:
         """Update game state after an action"""
@@ -181,8 +179,6 @@ class GameService:
 
     async def _move_to_next_player(self, game: GameState) -> None:
         """Move to the next active player"""
-        if game.active_player_index is None:
-            return
 
         # Find next active player
         next_index = (game.active_player_index + 1) % len(game.players)
@@ -204,22 +200,26 @@ class GameService:
         game.min_raise = game.big_blind
 
         # Advance phase
-        if game.phase == GamePhase.PRE_FLOP:
-            game.phase = GamePhase.FLOP
-            # Deal flop (this would need deck implementation)
-            # game.community_cards = game.deck.deal_community_cards(3)
-        elif game.phase == GamePhase.FLOP:
-            game.phase = GamePhase.TURN
-            # Deal turn
-            # game.community_cards.extend(game.deck.deal_community_cards(1))
-        elif game.phase == GamePhase.TURN:
-            game.phase = GamePhase.RIVER
-            # Deal river
-            # game.community_cards.extend(game.deck.deal_community_cards(1))
-        elif game.phase == GamePhase.RIVER:
-            game.phase = GamePhase.SHOWDOWN
-            await self._determine_winner(game)
-            return
+        match game.phase:
+            case GamePhase.PRE_FLOP:
+                game.phase = GamePhase.FLOP
+                # Deal flop (this would need deck implementation)
+                # game.community_cards = game.deck.deal_community_cards(3)
+            case GamePhase.FLOP:
+                game.phase = GamePhase.TURN
+                # Deal turn
+                # game.community_cards.extend(game.deck.deal_community_cards(1))
+            case GamePhase.TURN:
+                game.phase = GamePhase.RIVER
+                # Deal river
+                # game.community_cards.extend(game.deck.deal_community_cards(1))
+            case GamePhase.RIVER:
+                game.phase = GamePhase.SHOWDOWN
+                await self._determine_winner(game)
+                return
+            case _:
+                # Handle any other phases
+                pass
 
         # Set first active player after dealer
         active_players = [

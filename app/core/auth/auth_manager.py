@@ -1,58 +1,32 @@
 import secrets
 import hashlib
+import json
+import base64
 from typing import Dict, Optional, Tuple, Any, List
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 
-# JWT import with proper error handling
-try:
-    import jwt
 
-    jwt_module: Any = jwt
-    JWT_AVAILABLE = True
-except ImportError:
-    JWT_AVAILABLE = False
-    jwt_module = None  # type: ignore
+# Simple JWT-like token implementation for development
+class SimpleJWT:
+    @staticmethod
+    def encode(payload: Dict[str, Any], key: str, algorithm: str = "HS256") -> str:
+        # Simple base64 encoding for development purposes
+        return base64.b64encode(json.dumps(payload).encode()).decode()
 
-if not JWT_AVAILABLE:
+    @staticmethod
+    def decode(
+        token: str, key: str, algorithms: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        try:
+            decoded_data = base64.b64decode(token).decode()
+            return json.loads(decoded_data)  # type: ignore
+        except:
+            raise ValueError("Invalid token")
 
-    class MockJWT:
-        @staticmethod
-        def encode(payload: Dict[str, Any], key: str, algorithm: str = "HS256") -> str:
-            # Simple base64 encoding for mock purposes, not secure
-            import json
-            import base64
 
-            return base64.b64encode(json.dumps(payload).encode()).decode()
-
-        @staticmethod
-        def decode(
-            token: str, key: str, algorithms: Optional[List[str]] = None
-        ) -> Dict[str, Any]:
-            import json
-            import base64
-
-            try:
-                decoded_data = base64.b64decode(token).decode()
-                return json.loads(decoded_data)
-            except:
-                raise ValueError("Invalid token")
-
-    # Create a mock jwt module
-    class MockJWTModule:
-        @staticmethod
-        def encode(payload: Dict[str, Any], key: str, algorithm: str = "HS256") -> str:
-            return MockJWT.encode(payload, key, algorithm)
-
-        @staticmethod
-        def decode(
-            token: str,
-            key: str,
-            algorithms: Optional[List[str]] = None,
-        ) -> Dict[str, Any]:
-            return MockJWT.decode(token, key, algorithms)
-
-    jwt_module = MockJWTModule()
+# Use simple JWT for now - can be replaced with real JWT later
+jwt_module = SimpleJWT
 
 
 class PlayerToken(BaseModel):

@@ -14,7 +14,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
-from fastapi.responses import RedirectResponse
 from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -26,16 +25,6 @@ from app.store.game_store import game_store
 from app.core.agents.agent_manager import agent_manager
 from app.core.game.poker_engine import poker_engine
 
-# Try to import frontend components
-try:
-    from nicegui import ui
-    from app.ui.frontend import create_poker_ui
-
-    FRONTEND_AVAILABLE = True
-except ImportError:
-    ui = None
-    create_poker_ui = None
-    FRONTEND_AVAILABLE = False
 
 # Load environment variables
 load_dotenv()
@@ -89,8 +78,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     print(f"🎮 Server ready on http://{Config.HOST}:{Config.PORT}")
     print("📚 API docs available at /docs")
-    if FRONTEND_AVAILABLE:
-        print("🎨 Frontend available at /")
+    print(f"🎨 Frontend available at http://{Config.HOST}:{Config.PORT}")
 
     yield
 
@@ -155,26 +143,10 @@ app.include_router(websockets.router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-# Health check (must be before frontend to avoid NiceGUI interception)
+# Health check
 @app.get("/health")
 async def health_check() -> Dict[str, str]:
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-
-# Redirect root to UI
-@app.get("/")
-async def root() -> RedirectResponse:
-    return RedirectResponse(url="/ui")
-
-
-# NiceGUI UI
-# Mount the NiceGUI app at the '/ui' path
-if ui:
-    ui.run_with(
-        app,
-        storage_secret="a_very_secret_key_for_storage",  # Change this in production
-        reconnect_timeout=10.0,
-    )
 
 
 if __name__ == "__main__":

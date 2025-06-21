@@ -47,16 +47,18 @@ class BehaviorUpdater:
 
     def _update_emotion(self, behavior: AgentBehavior, decision: AgentDecision) -> None:
         """Update emotion based on decision type"""
-        if decision.action_type.value in ["raise", "all_in"]:
-            behavior.update_emotion(EmotionState.AGGRESSIVE)
-        elif decision.action_type.value == "fold":
-            behavior.update_emotion(EmotionState.DEFENSIVE)
-        elif decision.confidence > 0.8:
-            behavior.update_emotion(EmotionState.CONFIDENT)
-        elif decision.confidence < 0.3:
-            behavior.update_emotion(EmotionState.NERVOUS)
-        else:
-            behavior.update_emotion(EmotionState.CALM)
+        match decision.action_type.value:
+            case "raise" | "all_in":
+                behavior.update_emotion(EmotionState.AGGRESSIVE)
+            case "fold":
+                behavior.update_emotion(EmotionState.DEFENSIVE)
+            case _:
+                if decision.confidence > 0.8:
+                    behavior.update_emotion(EmotionState.CONFIDENT)
+                elif decision.confidence < 0.3:
+                    behavior.update_emotion(EmotionState.NERVOUS)
+                else:
+                    behavior.update_emotion(EmotionState.CALM)
 
     def _update_aggression_modifier(
         self, behavior: AgentBehavior, decision: AgentDecision
@@ -71,20 +73,25 @@ class BehaviorUpdater:
             1 for action in recent_actions if action in ["fold", "check"]
         )
 
-        if aggressive_actions > passive_actions:
-            behavior.aggression_modifier = min(1.5, behavior.aggression_modifier + 0.1)
-        elif passive_actions > aggressive_actions:
-            behavior.aggression_modifier = max(0.5, behavior.aggression_modifier - 0.1)
-        else:
-            # Gradually return to baseline
-            if behavior.aggression_modifier > 1.0:
-                behavior.aggression_modifier = max(
-                    1.0, behavior.aggression_modifier - 0.05
-                )
-            elif behavior.aggression_modifier < 1.0:
+        match (aggressive_actions, passive_actions):
+            case (a, p) if a > p:
                 behavior.aggression_modifier = min(
-                    1.0, behavior.aggression_modifier + 0.05
+                    1.5, behavior.aggression_modifier + 0.1
                 )
+            case (a, p) if p > a:
+                behavior.aggression_modifier = max(
+                    0.5, behavior.aggression_modifier - 0.1
+                )
+            case _:
+                # Gradually return to baseline
+                if behavior.aggression_modifier > 1.0:
+                    behavior.aggression_modifier = max(
+                        1.0, behavior.aggression_modifier - 0.05
+                    )
+                elif behavior.aggression_modifier < 1.0:
+                    behavior.aggression_modifier = min(
+                        1.0, behavior.aggression_modifier + 0.05
+                    )
 
     def _update_bluff_modifier(
         self, behavior: AgentBehavior, decision: AgentDecision, game_state: GameState

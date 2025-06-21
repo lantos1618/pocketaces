@@ -98,19 +98,23 @@ async def handle_websocket_message(
 
     message_type = message.get("type")
 
-    if message_type == "join_room":
-        await handle_join_room(client_id, message, player_id)
-    elif message_type == "make_action":
-        await handle_make_action(client_id, message, player_id)
-    elif message_type == "get_game_state":
-        await handle_get_game_state(client_id, message)
-    else:
-        await manager.send_personal_message(
-            json.dumps(
-                {"type": "error", "message": f"Unknown message type: {message_type}"}
-            ),
-            client_id,
-        )
+    match message_type:
+        case "join_room":
+            await handle_join_room(client_id, message, player_id)
+        case "make_action":
+            await handle_make_action(client_id, message, player_id)
+        case "get_game_state":
+            await handle_get_game_state(client_id, message)
+        case _:
+            await manager.send_personal_message(
+                json.dumps(
+                    {
+                        "type": "error",
+                        "message": f"Unknown message type: {message_type}",
+                    }
+                ),
+                client_id,
+            )
 
 
 async def handle_join_room(

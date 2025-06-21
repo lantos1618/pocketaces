@@ -8,6 +8,7 @@ from ...models.game_models import (
     GamePhase,
     Card,
     HandRank,
+    HandRankType,
     PlayerStatus,
 )
 from ...models.agent_models import AgentMemory
@@ -107,7 +108,7 @@ class PokerEngine:
         if len(cards) < 5:
             # Not enough cards for a valid hand
             return HandRank(
-                rank="high_card",
+                rank=HandRankType.HIGH_CARD,
                 value=1,
                 cards=cards[:5] if len(cards) >= 5 else cards,
                 kickers=[],
@@ -128,7 +129,7 @@ class PokerEngine:
                 best_hand = hand_rank
 
         return best_hand or HandRank(
-            rank="high_card", value=1, cards=cards[:5], kickers=[]
+            rank=HandRankType.HIGH_CARD, value=1, cards=cards[:5], kickers=[]
         )
 
     def _evaluate_five_cards(self, cards: List[Card]) -> HandRank:
@@ -141,32 +142,50 @@ class PokerEngine:
             HandRank representing the hand type and value.
         """
         if len(cards) != 5:
-            return HandRank(rank="invalid", value=0, cards=cards, kickers=[])
+            return HandRank(rank=HandRankType.INVALID, value=0, cards=cards, kickers=[])
 
         # Sort cards by value (descending)
         cards.sort(key=lambda x: x.value, reverse=True)
 
         # Check for each hand type from highest to lowest
         if self._is_royal_flush(cards):
-            return HandRank(rank="royal_flush", value=10, cards=cards, kickers=[])
+            return HandRank(
+                rank=HandRankType.ROYAL_FLUSH, value=10, cards=cards, kickers=[]
+            )
         elif self._is_straight_flush(cards):
-            return HandRank(rank="straight_flush", value=9, cards=cards, kickers=[])
+            return HandRank(
+                rank=HandRankType.STRAIGHT_FLUSH, value=9, cards=cards, kickers=[]
+            )
         elif self._is_four_of_a_kind(cards):
-            return HandRank(rank="four_of_a_kind", value=8, cards=cards, kickers=[])
+            return HandRank(
+                rank=HandRankType.FOUR_OF_A_KIND, value=8, cards=cards, kickers=[]
+            )
         elif self._is_full_house(cards):
-            return HandRank(rank="full_house", value=7, cards=cards, kickers=[])
+            return HandRank(
+                rank=HandRankType.FULL_HOUSE, value=7, cards=cards, kickers=[]
+            )
         elif self._is_flush(cards):
-            return HandRank(rank="flush", value=6, cards=cards, kickers=[])
+            return HandRank(rank=HandRankType.FLUSH, value=6, cards=cards, kickers=[])
         elif self._is_straight(cards):
-            return HandRank(rank="straight", value=5, cards=cards, kickers=[])
+            return HandRank(
+                rank=HandRankType.STRAIGHT, value=5, cards=cards, kickers=[]
+            )
         elif self._is_three_of_a_kind(cards):
-            return HandRank(rank="three_of_a_kind", value=4, cards=cards, kickers=[])
+            return HandRank(
+                rank=HandRankType.THREE_OF_A_KIND, value=4, cards=cards, kickers=[]
+            )
         elif self._is_two_pair(cards):
-            return HandRank(rank="two_pair", value=3, cards=cards, kickers=[])
+            return HandRank(
+                rank=HandRankType.TWO_PAIR, value=3, cards=cards, kickers=[]
+            )
         elif self._is_one_pair(cards):
-            return HandRank(rank="one_pair", value=2, cards=cards, kickers=[])
+            return HandRank(
+                rank=HandRankType.ONE_PAIR, value=2, cards=cards, kickers=[]
+            )
         else:
-            return HandRank(rank="high_card", value=1, cards=cards, kickers=[])
+            return HandRank(
+                rank=HandRankType.HIGH_CARD, value=1, cards=cards, kickers=[]
+            )
 
     def _is_royal_flush(self, cards: List[Card]) -> bool:
         """Check if cards form a royal flush."""
@@ -313,21 +332,25 @@ class PokerEngine:
         Args:
             game: Game state to advance.
         """
-        if game.phase == GamePhase.PRE_FLOP:
-            game.phase = GamePhase.FLOP
-            # Deal flop (3 cards)
-            game.community_cards = self.deal_community_cards(3)
-        elif game.phase == GamePhase.FLOP:
-            game.phase = GamePhase.TURN
-            # Deal turn (1 card)
-            game.community_cards.extend(self.deal_community_cards(1))
-        elif game.phase == GamePhase.TURN:
-            game.phase = GamePhase.RIVER
-            # Deal river (1 card)
-            game.community_cards.extend(self.deal_community_cards(1))
-        elif game.phase == GamePhase.RIVER:
-            game.phase = GamePhase.SHOWDOWN
-            self._determine_winner(game)
+        match game.phase:
+            case GamePhase.PRE_FLOP:
+                game.phase = GamePhase.FLOP
+                # Deal flop (3 cards)
+                game.community_cards = self.deal_community_cards(3)
+            case GamePhase.FLOP:
+                game.phase = GamePhase.TURN
+                # Deal turn (1 card)
+                game.community_cards.extend(self.deal_community_cards(1))
+            case GamePhase.TURN:
+                game.phase = GamePhase.RIVER
+                # Deal river (1 card)
+                game.community_cards.extend(self.deal_community_cards(1))
+            case GamePhase.RIVER:
+                game.phase = GamePhase.SHOWDOWN
+                self._determine_winner(game)
+            case _:
+                # Handle any other phases
+                pass
 
         # Reset betting for new phase
         game.current_bet = 0

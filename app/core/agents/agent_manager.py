@@ -4,8 +4,9 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 
 from langchain_mistralai import ChatMistralAI
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 from langchain.memory import ConversationBufferMemory
+from pydantic import SecretStr
 
 from ...models.game_models import GameState, Player, PlayerAction, ActionType, GamePhase
 from ...models.agent_models import (
@@ -47,7 +48,9 @@ class AgentManager:
         """Initialize LangChain LLM with Mistral."""
         try:
             self.llm = ChatMistralAI(
-                model="mistral-large-latest", temperature=0.7, api_key=api_key
+                api_key=SecretStr(api_key),
+                model_name="mistral-large-latest",
+                temperature=0.7,
             )
             print("LangChain LLM initialized successfully with Mistral")
         except Exception as e:
