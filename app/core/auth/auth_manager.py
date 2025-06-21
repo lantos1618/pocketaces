@@ -6,8 +6,9 @@ from pydantic import BaseModel
 
 # JWT import with proper error handling
 try:
-    import jwt  # type: ignore
+    import jwt as _jwt
 
+    jwt = _jwt
     JWT_AVAILABLE = True
 except ImportError:
     JWT_AVAILABLE = False
@@ -21,7 +22,6 @@ except ImportError:
             import base64
             import json
 
-            # Simple base64 encoding as fallback
             data = json.dumps(payload).encode()
             return base64.b64encode(data).decode()
 
@@ -33,13 +33,12 @@ except ImportError:
             import json
 
             try:
-                # Simple base64 decoding as fallback
                 data = base64.b64decode(token).decode()
                 return json.loads(data)
             except:
                 raise ValueError("Invalid token")
 
-    jwt = MockJWT()
+    jwt: Any = MockJWT()
 
 
 class PlayerToken(BaseModel):

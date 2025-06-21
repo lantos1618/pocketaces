@@ -52,7 +52,7 @@ manager = ConnectionManager()
 @router.websocket("/ws/{client_id}")
 async def websocket_endpoint(
     websocket: WebSocket, client_id: str, token: Optional[str] = None
-):
+) -> None:
     """WebSocket endpoint for real-time game updates"""
 
     await manager.connect(websocket, client_id)
@@ -93,7 +93,7 @@ async def websocket_endpoint(
 
 async def handle_websocket_message(
     client_id: str, message: Dict[str, Any], player_id: Optional[str]
-):
+) -> None:
     """Handle incoming WebSocket messages"""
 
     message_type = message.get("type")
@@ -115,7 +115,7 @@ async def handle_websocket_message(
 
 async def handle_join_room(
     client_id: str, message: Dict[str, Any], player_id: Optional[str]
-):
+) -> None:
     """Handle join room request"""
 
     room_id = message.get("room_id")
@@ -144,7 +144,7 @@ async def handle_join_room(
 
 async def handle_make_action(
     client_id: str, message: Dict[str, Any], player_id: Optional[str]
-):
+) -> None:
     """Handle make action request"""
 
     game_id = message.get("game_id")
@@ -185,7 +185,7 @@ async def handle_make_action(
     )
 
 
-async def handle_get_game_state(client_id: str, message: Dict[str, Any]):
+async def handle_get_game_state(client_id: str, message: Dict[str, Any]) -> None:
     """Handle get game state request"""
 
     game_id = message.get("game_id")

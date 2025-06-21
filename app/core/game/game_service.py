@@ -281,3 +281,27 @@ class GameService:
             actions.append("all_in")
 
         return actions
+
+    def update_behavior(self, behavior):
+        aggressive_actions = sum(
+            1
+            for action in behavior.action_history
+            if action.action_type in ["raise", "all_in"]
+        )
+        passive_actions = len(behavior.action_history) - aggressive_actions
+
+        if aggressive_actions > passive_actions:
+            behavior.aggression_modifier = min(1.5, behavior.aggression_modifier + 0.1)
+        elif passive_actions > aggressive_actions:
+            behavior.aggression_modifier = max(0.5, behavior.aggression_modifier - 0.1)
+        else:
+            # Gradually return to baseline
+            if behavior.aggression_modifier > 1.0:
+                behavior.aggression_modifier = max(
+                    1.0, behavior.aggression_modifier - 0.05
+                )
+            elif behavior.aggression_modifier < 1.0:
+                behavior.aggression_modifier = min(
+                    1.0, behavior.aggression_modifier + 0.05
+                )
+        # type: ignore[unreachable]

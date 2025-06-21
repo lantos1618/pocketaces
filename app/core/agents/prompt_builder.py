@@ -119,21 +119,15 @@ Consider your personality traits, the pot odds, your position, and any relevant 
 
     def _format_game_state(self, game_state: Dict[str, Any]) -> str:
         """Format game state for prompt"""
-        return f"""Game ID: {game_state.get('game_id', 'Unknown')}
-Phase: {game_state.get('phase', 'Unknown')}
-Pot: {game_state.get('pot', 0)}
-Current Bet: {game_state.get('current_bet', 0)}
-Min Raise: {game_state.get('min_raise', 0)}
-Community Cards: {', '.join(game_state.get('community_cards', []))}
-Dealer Position: {game_state.get('dealer_index', 0)}"""
+        return str(
+            f"""Game ID: {game_state.get('game_id', 'Unknown')}\nPhase: {game_state.get('phase', 'Unknown')}\nPot: {game_state.get('pot', 0)}\nCurrent Bet: {game_state.get('current_bet', 0)}\nMin Raise: {game_state.get('min_raise', 0)}\nCommunity Cards: {', '.join(game_state.get('community_cards', []) )}\nDealer Position: {game_state.get('dealer_index', 0)}"""
+        )
 
     def _format_player_state(self, player_state: Dict[str, Any]) -> str:
         """Format player state for prompt"""
-        return f"""Chips: {player_state.get('chips', 0)}
-Current Bet: {player_state.get('current_bet', 0)}
-Position: {player_state.get('position', 0)}
-Hole Cards: {', '.join(player_state.get('hole_cards', []))}
-Status: {player_state.get('status', 'Unknown')}"""
+        return str(
+            f"""Chips: {player_state.get('chips', 0)}\nCurrent Bet: {player_state.get('current_bet', 0)}\nPosition: {player_state.get('position', 0)}\nHole Cards: {', '.join(player_state.get('hole_cards', []) )}\nStatus: {player_state.get('status', 'Unknown')}"""
+        )
 
     def _format_opponents(self, opponent_profiles: Dict[str, Dict[str, Any]]) -> str:
         """Format opponent profiles for prompt"""
@@ -150,7 +144,7 @@ Status: {player_state.get('status', 'Unknown')}"""
                 f"status: {profile.get('status', 'Unknown')}"
             )
 
-        return "\n".join(opponent_lines)
+        return str("\n".join(opponent_lines))
 
     def _format_memories(self, memories: List[AgentMemory]) -> str:
         """Format memories for prompt"""
@@ -164,4 +158,4 @@ Status: {player_state.get('status', 'Unknown')}"""
                 f"({memory.amount}) in {memory.phase.value} - {memory.outcome.value if memory.outcome else 'Unknown'}"
             )
 
-        return "\n".join(memory_lines)
+        return str("\n".join(memory_lines))
