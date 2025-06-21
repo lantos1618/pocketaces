@@ -6,10 +6,10 @@ from pydantic import BaseModel
 
 # JWT import with proper error handling
 try:
-    import jwt as _jwt
+    import jwt
 
-    jwt = _jwt
     JWT_AVAILABLE = True
+    jwt_module = jwt
 except ImportError:
     JWT_AVAILABLE = False
 
@@ -38,7 +38,21 @@ except ImportError:
             except:
                 raise ValueError("Invalid token")
 
-    jwt: Any = MockJWT()
+    # Create a mock jwt module
+    class MockJWTModule:
+        @staticmethod
+        def encode(
+            payload: Dict[str, Any], secret: str, algorithm: str = "HS256"
+        ) -> str:
+            return MockJWT.encode(payload, secret, algorithm)
+
+        @staticmethod
+        def decode(
+            token: str, secret: str, algorithms: Optional[List[str]] = None
+        ) -> Dict[str, Any]:
+            return MockJWT.decode(token, secret, algorithms)
+
+    jwt_module: Any = MockJWTModule()
 
 
 class PlayerToken(BaseModel):
@@ -82,7 +96,7 @@ class AuthManager:
         )
 
         # Generate JWT token
-        payload = {
+        payload: Dict[str, Any] = {
             "player_id": player_id,
             "room_id": room_id,
             "game_id": game_id,
@@ -90,7 +104,7 @@ class AuthManager:
             "iat": now.timestamp(),
         }
 
-        token = jwt.encode(payload, self.secret_key, algorithm="HS256")
+        token = jwt_module.encode(payload, self.secret_key, algorithm="HS256")
 
         # Store token data
         self.active_tokens[token] = token_data
@@ -106,7 +120,9 @@ class AuthManager:
         """Validate a token and return the player_id if valid."""
         try:
             # Decode JWT
-            payload = jwt.decode(token, self.secret_key, algorithms=["HS256"])
+            payload: Dict[str, Any] = jwt_module.decode(
+                token, self.secret_key, algorithms=["HS256"]
+            )
             player_id = payload.get("player_id")
 
             if not player_id:

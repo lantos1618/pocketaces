@@ -160,7 +160,8 @@ class GameService:
 
             return True
 
-        return False
+        # Handle any unexpected action types
+        return False  # type: ignore[unreachable]
 
     async def _update_game_state(self, game: GameState) -> None:
         """Update game state after an action"""
@@ -282,7 +283,7 @@ class GameService:
 
         return actions
 
-    def update_behavior(self, behavior):
+    def update_behavior(self, behavior: Any) -> None:
         aggressive_actions = sum(
             1
             for action in behavior.action_history
@@ -304,4 +305,3 @@ class GameService:
                 behavior.aggression_modifier = min(
                     1.0, behavior.aggression_modifier + 0.05
                 )
-        # type: ignore[unreachable]

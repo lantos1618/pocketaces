@@ -119,9 +119,8 @@ Consider your personality traits, the pot odds, your position, and any relevant 
 
     def _format_game_state(self, game_state: Dict[str, Any]) -> str:
         """Format game state for prompt"""
-        return str(
-            f"""Game ID: {game_state.get('game_id', 'Unknown')}\nPhase: {game_state.get('phase', 'Unknown')}\nPot: {game_state.get('pot', 0)}\nCurrent Bet: {game_state.get('current_bet', 0)}\nMin Raise: {game_state.get('min_raise', 0)}\nCommunity Cards: {', '.join(game_state.get('community_cards', []) )}\nDealer Position: {game_state.get('dealer_index', 0)}"""
-        )
+        formatted = f"""Game ID: {game_state.get('game_id', 'Unknown')}\nPhase: {game_state.get('phase', 'Unknown')}\nPot: {game_state.get('pot', 0)}\nCurrent Bet: {game_state.get('current_bet', 0)}\nMin Raise: {game_state.get('min_raise', 0)}\nCommunity Cards: {', '.join(game_state.get('community_cards', []) )}\nDealer Position: {game_state.get('dealer_index', 0)}"""
+        return formatted
 
     def _format_player_state(self, player_state: Dict[str, Any]) -> str:
         """Format player state for prompt"""

@@ -10,15 +10,15 @@ router = APIRouter(tags=["WebSockets"])
 class ConnectionManager:
     """Manages WebSocket connections"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.active_connections: Dict[str, WebSocket] = {}
         self.player_connections: Dict[str, str] = {}  # player_id -> client_id
 
-    async def connect(self, websocket: WebSocket, client_id: str):
+    async def connect(self, websocket: WebSocket, client_id: str) -> None:
         await websocket.accept()
         self.active_connections[client_id] = websocket
 
-    def disconnect(self, client_id: str):
+    def disconnect(self, client_id: str) -> None:
         if client_id in self.active_connections:
             del self.active_connections[client_id]
 
@@ -32,15 +32,15 @@ class ConnectionManager:
         if player_id:
             del self.player_connections[player_id]
 
-    async def send_personal_message(self, message: str, client_id: str):
+    async def send_personal_message(self, message: str, client_id: str) -> None:
         if client_id in self.active_connections:
             await self.active_connections[client_id].send_text(message)
 
-    async def broadcast(self, message: str):
+    async def broadcast(self, message: str) -> None:
         for connection in self.active_connections.values():
             await connection.send_text(message)
 
-    def register_player(self, player_id: str, client_id: str):
+    def register_player(self, player_id: str, client_id: str) -> None:
         """Register a player with their client connection."""
         self.player_connections[player_id] = client_id
 
@@ -49,7 +49,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@router.websocket("/ws/{client_id}")
+@router.websocket("/ws/{client_id}")  # type: ignore[misc]
 async def websocket_endpoint(
     websocket: WebSocket, client_id: str, token: Optional[str] = None
 ) -> None:

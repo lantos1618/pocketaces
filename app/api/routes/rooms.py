@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException
 from ...store.game_store import game_store
 from ...models.game_models import GameRoom
@@ -6,47 +6,47 @@ from ...models.game_models import GameRoom
 router = APIRouter(prefix="/api/rooms", tags=["Rooms"])
 
 
-@router.get("/")
-async def get_rooms():
+@router.get("/")  # type: ignore[misc]
+async def get_rooms() -> List[Dict[str, Any]]:
     """Get all available rooms"""
     rooms = game_store.get_all_rooms()
-    return [room.model_dump() for room in rooms]
+    return [dict(room.model_dump()) for room in rooms]
 
 
-@router.post("/")
+@router.post("/")  # type: ignore[misc]
 async def create_room(
     name: str, max_players: int = 3, settings: Optional[Dict[str, Any]] = None
-):
+) -> Dict[str, Any]:
     """Create a new game room"""
     try:
         room = await game_store.create_room(
             name=name, max_players=max_players, settings=settings or {}
         )
-        return room.model_dump()
+        return dict(room.model_dump())
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{room_id}")
-async def get_room(room_id: str):
+@router.get("/{room_id}")  # type: ignore[misc]
+async def get_room(room_id: str) -> Dict[str, Any]:
     """Get a specific room by ID"""
     room = game_store.get_room(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-    return room.model_dump()
+    return dict(room.model_dump())
 
 
-@router.post("/{room_id}/start-game")
-async def start_game(room_id: str):
+@router.post("/{room_id}/start-game")  # type: ignore[misc]
+async def start_game(room_id: str) -> Dict[str, Any]:
     """Start a new game in a room"""
     game = await game_store.create_game(room_id)
     if not game:
         raise HTTPException(status_code=400, detail="Cannot start game")
-    return game.model_dump()
+    return dict(game.model_dump())
 
 
-@router.post("/{room_id}/join")
-async def join_room(room_id: str, player_name: str):
+@router.post("/{room_id}/join")  # type: ignore[misc]
+async def join_room(room_id: str, player_name: str) -> Dict[str, Any]:
     """Join a room as a player"""
     from ...models.game_models import Player
 
@@ -70,8 +70,8 @@ async def join_room(room_id: str, player_name: str):
     }
 
 
-@router.post("/{room_id}/add-agent")
-async def add_agent_to_room(room_id: str, agent_id: str):
+@router.post("/{room_id}/add-agent")  # type: ignore[misc]
+async def add_agent_to_room(room_id: str, agent_id: str) -> Dict[str, Any]:
     """Add an AI agent to a room"""
     from ...models.game_models import Player
 

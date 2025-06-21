@@ -6,14 +6,14 @@ from ...models.game_models import ActionType
 router = APIRouter(prefix="/api/agents", tags=["Agents"])
 
 
-@router.get("/")
+@router.get("/")  # type: ignore[misc]
 async def get_agents() -> List[Dict[str, Any]]:
     """Get all available agents"""
     agents = game_store.get_all_agents()
     return [agent.model_dump() for agent in agents]
 
 
-@router.get("/action-types")
+@router.get("/action-types")  # type: ignore[misc]
 async def get_action_types() -> Dict[str, Any]:
     """Get all available action types"""
     return {
@@ -28,7 +28,7 @@ async def get_action_types() -> Dict[str, Any]:
     }
 
 
-@router.get("/{agent_id}")
+@router.get("/{agent_id}")  # type: ignore[misc]
 async def get_agent(agent_id: str) -> Dict[str, Any]:
     """Get agent details by ID"""
     agent = game_store.get_agent_personality(agent_id)
@@ -41,17 +41,17 @@ async def get_agent(agent_id: str) -> Dict[str, Any]:
     return {"agent": agent.model_dump(), "stats": stats.model_dump() if stats else None}
 
 
-@router.get("/{agent_id}/stats")
+@router.get("/{agent_id}/stats")  # type: ignore[misc]
 async def get_agent_stats(agent_id: str) -> Dict[str, Any]:
     """Get agent statistics"""
     stats = game_store.get_agent_stats(agent_id)
     if not stats:
         raise HTTPException(status_code=404, detail="Agent stats not found")
 
-    return stats.model_dump()
+    return dict(stats.model_dump())
 
 
-@router.get("/{agent_id}/memories")
+@router.get("/{agent_id}/memories")  # type: ignore[misc]
 async def get_agent_memories(agent_id: str, limit: int = 10) -> Dict[str, Any]:
     """Get agent memories"""
     memories = game_store.get_agent_memories(agent_id)
@@ -66,7 +66,7 @@ async def get_agent_memories(agent_id: str, limit: int = 10) -> Dict[str, Any]:
     }
 
 
-@router.get("/{agent_id}/performance")
+@router.get("/{agent_id}/performance")  # type: ignore[misc]
 async def get_agent_performance(agent_id: str) -> Dict[str, Any]:
     """Get agent performance metrics"""
     performance = game_store.get_agent_performance(agent_id)

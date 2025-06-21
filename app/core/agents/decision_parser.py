@@ -18,7 +18,7 @@ class ParsedDecision(BaseModel):
         default=EmotionState.CALM, description="Current emotional state"
     )
 
-    @validator("action_type")
+    @validator("action_type")  # type: ignore[misc]
     def validate_action_type(cls, v: str) -> str:
         valid_actions = ["fold", "check", "call", "raise", "all_in"]
         if v.lower() not in valid_actions:
@@ -27,8 +27,8 @@ class ParsedDecision(BaseModel):
             )
         return v.lower()
 
-    @validator("amount")
-    def validate_amount(cls, v: Optional[int], values: Dict[str, Any]) -> Optional[int]:
+    @validator("amount")  # type: ignore[misc]
+    def validate_amount(cls, v: Optional[int], values: dict[str, Any]) -> Optional[int]:
         if v is not None and v < 0:
             raise ValueError("Amount must be non-negative")
         if (

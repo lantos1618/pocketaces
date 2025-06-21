@@ -76,10 +76,6 @@ class PlayerAction(BaseModel):
                 if self.amount is not None:
                     return f"{self.player_id} went all-in with {self.amount}"
                 return f"{self.player_id} went all-in"
-            case _:
-                if self.amount is not None:
-                    return f"{self.player_id} {self.action_type.value} {self.amount}"
-                return f"{self.player_id} {self.action_type.value}"
 
 
 class Player(BaseModel):
@@ -217,7 +213,7 @@ class GameRoom(BaseModel):
             if player.id == player_id:
                 self.players.pop(i)
                 return True
-        return False  # type: ignore[unreachable]
+        return False
 
 
 class GameResult(BaseModel):
