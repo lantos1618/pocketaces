@@ -23,6 +23,15 @@ from app.store.game_store import game_store
 from app.core.agents.agent_manager import agent_manager
 from app.core.game.poker_engine import poker_engine
 
+# Import frontend
+try:
+    from app.ui.frontend import create_poker_ui
+
+    FRONTEND_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Frontend not available: {e}")
+    FRONTEND_AVAILABLE = False
+
 # Load environment variables
 load_dotenv()
 
@@ -75,6 +84,8 @@ async def lifespan(app: FastAPI):
 
     print(f"🎮 Server ready on http://{Config.HOST}:{Config.PORT}")
     print("📚 API docs available at /docs")
+    if FRONTEND_AVAILABLE:
+        print("🎨 Frontend available at /")
 
     yield
 
@@ -127,6 +138,11 @@ app.include_router(rooms.router)
 app.include_router(games.router)
 app.include_router(agents.router)
 app.include_router(websockets.router)
+
+# Initialize frontend if available
+if FRONTEND_AVAILABLE:
+    create_poker_ui(app)
+    print("✅ Frontend initialized")
 
 
 # Health check
