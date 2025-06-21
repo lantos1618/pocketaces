@@ -7,7 +7,7 @@ Main entry point for the FastAPI application
 import os
 import asyncio
 from contextlib import asynccontextmanager
-from typing import Dict, Any, List
+from typing import Dict, Any, List, AsyncGenerator
 from datetime import datetime
 
 from fastapi import FastAPI
@@ -15,6 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
 from fastapi.responses import RedirectResponse
+from fastapi.responses import ORJSONResponse
+from fastapi.staticfiles import StaticFiles
 
 # Import routers
 from app.api.routes import rooms, games, agents, websockets
@@ -24,13 +26,15 @@ from app.store.game_store import game_store
 from app.core.agents.agent_manager import agent_manager
 from app.core.game.poker_engine import poker_engine
 
-# Import frontend
+# Try to import frontend components
 try:
+    from nicegui import ui
     from app.ui.frontend import create_poker_ui
 
     FRONTEND_AVAILABLE = True
-except ImportError as e:
-    print(f"⚠️  Frontend not available: {e}")
+except ImportError:
+    ui = None
+    create_poker_ui = None
     FRONTEND_AVAILABLE = False
 
 # Load environment variables
@@ -64,7 +68,7 @@ class Config:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager"""
     # Startup
     print("🚀 Starting Pocket Aces Server...")
@@ -91,7 +95,8 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    print("🛑 Shutting down Pocket Aces Server...")
+    print("🛑 Stopping Pocket Aces Server...")
+    # You can add cleanup code here if needed, like closing database connections
 
 
 async def _create_default_rooms() -> None:
@@ -117,46 +122,59 @@ async def _create_default_rooms() -> None:
         )
 
 
-# Create FastAPI app
+# FastAPI App Initialization
 app = FastAPI(
-    title="Pocket Aces Poker",
-    description="Real-time poker game with AI agents",
+    title="Pocket Aces Poker API",
+    description="A modern, real-time poker platform with AI agents.",
     version="1.0.0",
     lifespan=lifespan,
+    default_response_class=ORJSONResponse,
 )
 
-# Add CORS middleware
+# CORS Middleware
+# This allows the frontend (running on a different port/domain) to communicate with the backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"],  # Allow all origins (for development)
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
 )
 
-# Include routers
-app.include_router(rooms.router)
+
+# API Routers
+# Include all the different API route modules
 app.include_router(games.router)
+app.include_router(rooms.router)
 app.include_router(agents.router)
 app.include_router(websockets.router)
 
 
+# Static Files
+# Serve static files (like CSS, JS, images) from the 'static' directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
 # Health check (must be before frontend to avoid NiceGUI interception)
 @app.get("/health")
-async def health_check():
+async def health_check() -> Dict[str, str]:
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 
 # Redirect root to UI
 @app.get("/")
-async def root():
+async def root() -> RedirectResponse:
     return RedirectResponse(url="/ui")
 
 
-# Initialize frontend if available
-if FRONTEND_AVAILABLE:
-    create_poker_ui(app)
-    print("✅ Frontend initialized")
+# NiceGUI UI
+# Mount the NiceGUI app at the '/ui' path
+if ui:
+    ui.run_with(
+        app,
+        storage_secret="a_very_secret_key_for_storage",  # Change this in production
+        reconnect_timeout=10.0,
+    )
 
 
 if __name__ == "__main__":

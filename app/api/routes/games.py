@@ -21,16 +21,16 @@ async def get_current_player(
     return auth_manager.validate_token(token)
 
 
-@router.get("/{game_id}")  # type: ignore[misc]
+@router.get("/{game_id}")
 async def get_game(game_id: str) -> Dict[str, Any]:
     """Get game state by ID"""
     game = await game_service.get_game_state(game_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-    return dict(game.model_dump())
+    return game.model_dump()
 
 
-@router.post("/{game_id}/action")  # type: ignore[misc]
+@router.post("/{game_id}/action")
 async def make_game_action(
     game_id: str,
     player_id: str,
@@ -66,7 +66,7 @@ async def make_game_action(
     }
 
 
-@router.get("/{game_id}/actions")  # type: ignore[misc]
+@router.get("/{game_id}/actions")
 async def get_available_actions(game_id: str, player_id: str) -> Dict[str, Any]:
     """Get available actions for a player"""
     actions = await game_service.get_available_actions(game_id, player_id)

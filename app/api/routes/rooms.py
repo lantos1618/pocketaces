@@ -7,46 +7,46 @@ from ...models.mock_data import MOCK_AGENTS
 router = APIRouter(prefix="/api/rooms", tags=["Rooms"])
 
 
-@router.get("/")  # type: ignore[misc]
+@router.get("/")
 async def get_rooms() -> List[Dict[str, Any]]:
     """Get all available rooms"""
     rooms = game_store.get_all_rooms()
-    return [dict(room.model_dump()) for room in rooms]
+    return [room.model_dump() for room in rooms]
 
 
-@router.post("/")  # type: ignore[misc]
+@router.post("/")
 async def create_room(
     name: str, max_players: int = 3, settings: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
-    """Create a new game room"""
+    """Create a new room"""
     try:
         room = await game_store.create_room(
             name=name, max_players=max_players, settings=settings or {}
         )
-        return dict(room.model_dump())
+        return room.model_dump()
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{room_id}")  # type: ignore[misc]
+@router.get("/{room_id}")
 async def get_room(room_id: str) -> Dict[str, Any]:
     """Get a specific room by ID"""
     room = game_store.get_room(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-    return dict(room.model_dump())
+    return room.model_dump()
 
 
-@router.post("/{room_id}/start-game")  # type: ignore[misc]
+@router.post("/{room_id}/start-game")
 async def start_game(room_id: str) -> Dict[str, Any]:
     """Start a new game in a room"""
     game = await game_store.create_game(room_id)
     if not game:
         raise HTTPException(status_code=400, detail="Cannot start game")
-    return dict(game.model_dump())
+    return game.model_dump()
 
 
-@router.post("/{room_id}/join")  # type: ignore[misc]
+@router.post("/{room_id}/join")
 async def join_room(room_id: str, player_name: str) -> Dict[str, Any]:
     """Join a room as a player"""
     from ...models.game_models import Player
@@ -71,7 +71,7 @@ async def join_room(room_id: str, player_name: str) -> Dict[str, Any]:
     }
 
 
-@router.post("/{room_id}/add-agent")  # type: ignore[misc]
+@router.post("/{room_id}/add-agent")
 async def add_agent_to_room(room_id: str, agent_id: str) -> Dict[str, Any]:
     """Add an AI agent to a room"""
     from ...models.game_models import Player

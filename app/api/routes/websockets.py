@@ -49,7 +49,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@router.websocket("/ws/{client_id}")  # type: ignore[misc]
+@router.websocket("/ws/{client_id}")
 async def websocket_endpoint(
     websocket: WebSocket, client_id: str, token: Optional[str] = None
 ) -> None:

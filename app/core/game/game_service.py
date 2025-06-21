@@ -161,7 +161,7 @@ class GameService:
             return True
 
         # Handle any unexpected action types
-        return False  # type: ignore[unreachable]
+        return False
 
     async def _update_game_state(self, game: GameState) -> None:
         """Update game state after an action"""

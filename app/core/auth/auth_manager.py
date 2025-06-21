@@ -8,51 +8,51 @@ from pydantic import BaseModel
 try:
     import jwt
 
+    jwt_module: Any = jwt
     JWT_AVAILABLE = True
-    jwt_module = jwt
 except ImportError:
     JWT_AVAILABLE = False
+    jwt_module = None  # type: ignore
 
-    # Create a mock jwt module for development
+if not JWT_AVAILABLE:
+
     class MockJWT:
         @staticmethod
-        def encode(
-            payload: Dict[str, Any], secret: str, algorithm: str = "HS256"
-        ) -> str:
-            import base64
+        def encode(payload: Dict[str, Any], key: str, algorithm: str = "HS256") -> str:
+            # Simple base64 encoding for mock purposes, not secure
             import json
+            import base64
 
-            data = json.dumps(payload).encode()
-            return base64.b64encode(data).decode()
+            return base64.b64encode(json.dumps(payload).encode()).decode()
 
         @staticmethod
         def decode(
-            token: str, secret: str, algorithms: Optional[List[str]] = None
+            token: str, key: str, algorithms: Optional[List[str]] = None
         ) -> Dict[str, Any]:
-            import base64
             import json
+            import base64
 
             try:
-                data = base64.b64decode(token).decode()
-                return json.loads(data)
+                decoded_data = base64.b64decode(token).decode()
+                return json.loads(decoded_data)
             except:
                 raise ValueError("Invalid token")
 
     # Create a mock jwt module
     class MockJWTModule:
         @staticmethod
-        def encode(
-            payload: Dict[str, Any], secret: str, algorithm: str = "HS256"
-        ) -> str:
-            return MockJWT.encode(payload, secret, algorithm)
+        def encode(payload: Dict[str, Any], key: str, algorithm: str = "HS256") -> str:
+            return MockJWT.encode(payload, key, algorithm)
 
         @staticmethod
         def decode(
-            token: str, secret: str, algorithms: Optional[List[str]] = None
+            token: str,
+            key: str,
+            algorithms: Optional[List[str]] = None,
         ) -> Dict[str, Any]:
-            return MockJWT.decode(token, secret, algorithms)
+            return MockJWT.decode(token, key, algorithms)
 
-    jwt_module: Any = MockJWTModule()
+    jwt_module = MockJWTModule()
 
 
 class PlayerToken(BaseModel):
@@ -96,7 +96,7 @@ class AuthManager:
         )
 
         # Generate JWT token
-        payload: Dict[str, Any] = {
+        payload = {
             "player_id": player_id,
             "room_id": room_id,
             "game_id": game_id,
@@ -104,7 +104,7 @@ class AuthManager:
             "iat": now.timestamp(),
         }
 
-        token = jwt_module.encode(payload, self.secret_key, algorithm="HS256")
+        token: str = jwt_module.encode(payload, self.secret_key, algorithm="HS256")
 
         # Store token data
         self.active_tokens[token] = token_data
@@ -120,15 +120,13 @@ class AuthManager:
         """Validate a token and return the player_id if valid."""
         try:
             # Decode JWT
-            payload: Dict[str, Any] = jwt_module.decode(
-                token, self.secret_key, algorithms=["HS256"]
-            )
-            player_id = payload.get("player_id")
+            payload = jwt_module.decode(token, self.secret_key, algorithms=["HS256"])
+            player_id: Optional[str] = payload.get("player_id")
 
             if not player_id:
                 return None
 
-            # Check if token is in active tokens
+            # Check for token in active list (revocation check)
             if token not in self.active_tokens:
                 return None
 
