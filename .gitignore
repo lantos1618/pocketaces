@@ -176,4 +176,3 @@ yarn-error.log*
 # Configuration files with secrets
 config.json
 secrets.json 
-.env.local
