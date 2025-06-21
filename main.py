@@ -76,9 +76,9 @@ async def lifespan(app: FastAPI):
     # Shutdown
     print("🛑 Shutting down Pocket Aces Server...")
 
-def _create_default_rooms():
+def _create_default_rooms() -> None:
     """Create default game rooms"""
-    default_rooms = [
+    default_rooms: List[Dict[str, Any]] = [
         {
             "name": "Demo Table",
             "max_players": 3,
@@ -100,7 +100,11 @@ def _create_default_rooms():
     ]
     
     for room_config in default_rooms:
-        game_store.create_room(**room_config)
+        game_store.create_room(
+            name=str(room_config["name"]),
+            max_players=int(room_config["max_players"]),
+            settings=room_config["settings"]
+        )
 
 # Create FastAPI app
 app = FastAPI(
@@ -167,13 +171,13 @@ async def health_check():
 async def get_rooms():
     """Get all available rooms"""
     rooms = game_store.get_all_rooms()
-    return [room.dict() for room in rooms]
+    return [room.model_dump() for room in rooms]
 
 @app.post("/api/rooms")
-async def create_room(name: str, max_players: int = 3, settings: Dict[str, Any] = None):
+async def create_room(name: str, max_players: int = 3, settings: Optional[Dict[str, Any]] = None):
     """Create a new room"""
     room = game_store.create_room(name, max_players, settings or {})
-    return room.dict()
+    return room.model_dump()
 
 @app.get("/api/rooms/{room_id}")
 async def get_room(room_id: str):
@@ -181,7 +185,7 @@ async def get_room(room_id: str):
     room = game_store.get_room(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-    return room.dict()
+    return room.model_dump()
 
 # Game endpoints
 @app.post("/api/rooms/{room_id}/start-game")
@@ -190,7 +194,7 @@ async def start_game(room_id: str):
     game = poker_engine.start_new_game(room_id)
     if not game:
         raise HTTPException(status_code=400, detail="Cannot start game")
-    return game.dict()
+    return game.model_dump()
 
 @app.get("/api/games/{game_id}")
 async def get_game(game_id: str):
@@ -198,7 +202,7 @@ async def get_game(game_id: str):
     game = game_store.get_game(game_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-    return game.dict()
+    return game.model_dump()
 
 # Player endpoints
 @app.post("/api/rooms/{room_id}/join")
@@ -224,7 +228,21 @@ async def join_room(room_id: str, player_name: str):
 async def get_agents():
     """Get all available AI agents"""
     agents = game_store.get_all_agents()
-    return [agent.dict() for agent in agents]
+    return [agent.model_dump() for agent in agents]
+
+@app.get("/api/action-types")
+async def get_action_types():
+    """Get all available action types"""
+    return {
+        "action_types": [action.value for action in ActionType],
+        "descriptions": {
+            ActionType.FOLD.value: "Fold your hand and exit the current round",
+            ActionType.CHECK.value: "Pass the action to the next player without betting",
+            ActionType.CALL.value: "Match the current bet amount",
+            ActionType.RAISE.value: "Increase the current bet amount",
+            ActionType.ALL_IN.value: "Bet all remaining chips"
+        }
+    }
 
 @app.post("/api/rooms/{room_id}/add-agent")
 async def add_agent_to_room(room_id: str, agent_id: str):
@@ -268,6 +286,16 @@ async def handle_join_room(client_id: str, message: Dict[str, Any]):
     room_id = message.get("room_id")
     player_name = message.get("player_name", "Anonymous")
     
+    if not room_id:
+        await manager.send_personal_message(
+            json.dumps({"type": "error", "message": "room_id is required"}),
+            client_id
+        )
+        return
+    
+    # Type assertion after validation
+    assert isinstance(room_id, str)
+    
     try:
         result = await join_room(room_id, player_name)
         await manager.send_personal_message(
@@ -287,15 +315,50 @@ async def handle_make_action(client_id: str, message: Dict[str, Any]):
     action_type = message.get("action_type")
     amount = message.get("amount")
     
+    if not all([game_id, player_id, action_type]):
+        await manager.send_personal_message(
+            json.dumps({"type": "error", "message": "game_id, player_id, and action_type are required"}),
+            client_id
+        )
+        return
+    
+    # Type assertions after validation
+    assert isinstance(game_id, str)
+    assert isinstance(player_id, str)
+    assert isinstance(action_type, str)
+    
+    # Validate action type
     try:
-        success = game_store.make_player_action(game_id, player_id, action_type, amount)
+        valid_action_type = ActionType(action_type)
+    except ValueError:
+        valid_actions = [action.value for action in ActionType]
+        await manager.send_personal_message(
+            json.dumps({
+                "type": "error", 
+                "message": f"Invalid action_type. Must be one of: {valid_actions}"
+            }),
+            client_id
+        )
+        return
+    
+    # Validate amount for actions that require it
+    if valid_action_type in [ActionType.RAISE, ActionType.CALL] and amount is None:
+        await manager.send_personal_message(
+            json.dumps({"type": "error", "message": f"Amount is required for {valid_action_type.value} action"}),
+            client_id
+        )
+        return
+    
+    try:
+        success = game_store.make_player_action(game_id, player_id, valid_action_type.value, amount)
         if success:
             # Broadcast updated game state
             game = game_store.get_game(game_id)
-            await manager.broadcast(json.dumps({
-                "type": "game_updated",
-                "data": game.dict()
-            }))
+            if game:
+                await manager.broadcast(json.dumps({
+                    "type": "game_updated",
+                    "data": game.model_dump()
+                }))
         else:
             await manager.send_personal_message(
                 json.dumps({"type": "error", "message": "Invalid action"}),
@@ -311,11 +374,21 @@ async def handle_get_game_state(client_id: str, message: Dict[str, Any]):
     """Handle game state request"""
     game_id = message.get("game_id")
     
+    if not game_id:
+        await manager.send_personal_message(
+            json.dumps({"type": "error", "message": "game_id is required"}),
+            client_id
+        )
+        return
+    
+    # Type assertion after validation
+    assert isinstance(game_id, str)
+    
     try:
         game = game_store.get_game(game_id)
         if game:
             await manager.send_personal_message(
-                json.dumps({"type": "game_state", "data": game.dict()}),
+                json.dumps({"type": "game_state", "data": game.model_dump()}),
                 client_id
             )
         else:

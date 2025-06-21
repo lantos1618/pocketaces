@@ -1,9 +1,11 @@
+from typing import List, Optional, Dict, Any, Union
 import random
-from typing import List, Dict, Any, Optional
-from .game_models import Card, Player, GameState, GameRoom, GamePhase
+from datetime import datetime, timedelta
+from .game_models import Card, GameState, GameRoom, Player, GamePhase, ActionType
 from .agent_models import (
-    AgentPersonality, PersonalityTrait, VoiceStyle, 
-    AgentStats, AgentMemory, EmotionState, ActionTypeStr, GamePhaseStr, OutcomeStr, PositionStr
+    AgentPersonality, AgentStats, AgentMemory, AgentBehavior, AgentInteraction,
+    PersonalityTrait, VoiceStyle, EmotionState, ActionTypeStr, GamePhaseStr, 
+    OutcomeStr, PositionStr, InteractionTypeStr, ContextStr
 )
 
 # Mock Cards
@@ -301,12 +303,12 @@ for agent in MOCK_AGENTS:
             agent_id=agent.agent_id,
             opponent_id=f"player_{random.randint(1, 10)}",
             game_id=f"game_{random.randint(1, 100)}",
-            action_type=random.choice(["raise", "call", "fold", "bluff"]),
+            action_type=random.choice([ActionTypeStr.RAISE, ActionTypeStr.CALL, ActionTypeStr.FOLD, ActionTypeStr.CHECK, ActionTypeStr.ALL_IN]),
             amount=random.randint(10, 200) if random.random() > 0.3 else None,
-            phase=random.choice(["pre_flop", "flop", "turn", "river"]),
-            outcome=random.choice(["won", "lost", "folded", "bluffed_successfully"]),
+            phase=random.choice([GamePhaseStr.PRE_FLOP, GamePhaseStr.FLOP, GamePhaseStr.TURN, GamePhaseStr.RIVER]),
+            outcome=random.choice([OutcomeStr.WON, OutcomeStr.LOST, OutcomeStr.FOLDED, OutcomeStr.BLUFFED_SUCCESSFULLY]),
             pot_size=random.randint(50, 500),
-            position=random.choice(["early", "middle", "late"]),
+            position=random.choice([PositionStr.EARLY, PositionStr.MIDDLE, PositionStr.LATE]),
             importance=random.uniform(0.1, 1.0)
         )
         MOCK_AGENT_MEMORIES.append(memory)

@@ -49,17 +49,27 @@ class PlayerAction(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now)
     
     def __str__(self) -> str:
-        if self.action_type == ActionType.FOLD:
-            return f"{self.player_id} folded"
-        elif self.action_type == ActionType.CHECK:
-            return f"{self.player_id} checked"
-        elif self.action_type == ActionType.CALL:
-            return f"{self.player_id} called {self.amount}"
-        elif self.action_type == ActionType.RAISE:
-            return f"{self.player_id} raised to {self.amount}"
-        elif self.action_type == ActionType.ALL_IN:
-            return f"{self.player_id} went all-in with {self.amount}"
-        return f"{self.player_id} {self.action_type}"
+        match self.action_type:
+            case ActionType.FOLD:
+                return f"{self.player_id} folded"
+            case ActionType.CHECK:
+                return f"{self.player_id} checked"
+            case ActionType.CALL:
+                if self.amount is not None:
+                    return f"{self.player_id} called {self.amount}"
+                return f"{self.player_id} called"
+            case ActionType.RAISE:
+                if self.amount is not None:
+                    return f"{self.player_id} raised to {self.amount}"
+                return f"{self.player_id} raised"
+            case ActionType.ALL_IN:
+                if self.amount is not None:
+                    return f"{self.player_id} went all-in with {self.amount}"
+                return f"{self.player_id} went all-in"
+            case _:
+                if self.amount is not None:
+                    return f"{self.player_id} {self.action_type.value} {self.amount}"
+                return f"{self.player_id} {self.action_type.value}"
 
 class Player(BaseModel):
     """A player in the game."""

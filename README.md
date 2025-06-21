@@ -12,22 +12,31 @@ Players face off against agents who don't just play — they **trash talk, learn
 
 ### Prerequisites
 
-- Python 3.9+
+- **Python 3.12.3** (required - use [pyenv](https://github.com/pyenv/pyenv) to manage versions)
 - OpenAI API key
 - ElevenLabs API key (for voice synthesis)
 
 ### Installation
 
-1. **Clone the repository**
+#### Option 1: Automated Setup (Recommended)
+```bash
+git clone <repository-url>
+cd pocketaces
+./setup.sh
+```
+
+#### Option 2: Manual Setup
+1. **Install pyenv and Python 3.12.3**
    ```bash
-   git clone <repository-url>
-   cd pocketaces
+   curl https://pyenv.run | bash
+   pyenv install 3.12.3
+   pyenv local 3.12.3
    ```
 
 2. **Create virtual environment**
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
 3. **Install dependencies**
@@ -46,7 +55,27 @@ Players face off against agents who don't just play — they **trash talk, learn
    python main.py
    ```
 
+#### Option 3: Using Make
+```bash
+make setup    # Full setup
+make run      # Start server
+make dev      # Development mode with auto-reload
+```
+
 The server will start on `http://localhost:8000`
+
+## 🛠️ Development Commands
+
+```bash
+make help     # Show all available commands
+make setup    # Full project setup
+make venv     # Create virtual environment only
+make install  # Install dependencies
+make run      # Start the server
+make dev      # Development mode with auto-reload
+make test     # Run tests
+make clean    # Clean up generated files
+```
 
 ## 🧩 Core Features
 
