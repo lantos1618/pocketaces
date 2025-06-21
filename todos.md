@@ -56,6 +56,22 @@
 - [x] **FIXED: Async State Management** - Made critical game store methods async with proper locking
 - [x] **FIXED: JWT Import Issues** - Added proper fallback handling and type ignore for development
 
+### ARCHITECTURAL IMPROVEMENTS - God File Refactoring
+- [x] **FIXED: Brittle Prompt Parsing** - Replaced string splitting with robust Pydantic-based DecisionParser
+- [x] **FIXED: Hardcoded Values** - Removed magic number 1000, now uses room settings for starting chips
+- [x] **FIXED: Monolithic AgentManager** - Broke down into specialized services:
+  - [x] PromptBuilder - Isolates prompt construction logic
+  - [x] DecisionParser - Robust LLM response parsing with multiple fallback strategies
+  - [x] BehaviorUpdater - Manages agent behavior state separately
+  - [x] VoiceLineGenerator - Handles all voice-related logic
+- [x] **FIXED: Monolithic main.py** - Separated into focused routers:
+  - [x] rooms.py - Room management endpoints
+  - [x] games.py - Game action endpoints
+  - [x] agents.py - Agent management endpoints
+  - [x] websockets.py - WebSocket handling
+- [x] **FIXED: Business Logic in Store** - Created GameService to separate business logic from data storage
+- [x] **FIXED: Configuration Mismatch** - All todos now reflect Python 3.12.3 requirement
+
 ## 🚧 In Progress
 
 ### Core Game Engine
@@ -72,11 +88,11 @@
 ## 📋 Next Steps
 
 ### High Priority
-1. **Code Smells Cleanup** - Improve maintainability
-   - [ ] Move imports to top of files
-   - [ ] Replace giant f-string with PromptTemplate in agent_manager.py
-   - [ ] Remove redundant event handlers in main.py
-   - [ ] Fix remaining circular import issues
+1. **Testing Infrastructure** - Ensure reliability
+   - [ ] Unit tests for new specialized services
+   - [ ] Integration tests for refactored components
+   - [ ] Load tests for WebSocket connections
+   - [ ] Security tests for authorization
 
 2. **Authentication Enhancement** - Production-ready auth
    - [ ] Add token refresh mechanism
@@ -84,11 +100,11 @@
    - [ ] Add rate limiting for API endpoints
    - [ ] Add proper error handling for auth failures
 
-3. **Testing Infrastructure** - Ensure reliability
-   - [ ] Unit tests for game store with concurrency
-   - [ ] Integration tests for authentication flow
-   - [ ] Load tests for WebSocket connections
-   - [ ] Security tests for authorization
+3. **Performance Optimization** - Scale the architecture
+   - [ ] Add caching layer for frequently accessed data
+   - [ ] Optimize database queries (when DB is added)
+   - [ ] Implement connection pooling
+   - [ ] Add monitoring and metrics
 
 ### Medium Priority
 4. **WebSocket Implementation** - Real-time communication
@@ -137,6 +153,9 @@
 - [x] **CRITICAL: Race conditions in game state** - FIXED ✅
 - [x] **CRITICAL: No authentication/authorization** - FIXED ✅
 - [x] **CRITICAL: Configuration version mismatch** - FIXED ✅
+- [x] **CRITICAL: Brittle prompt parsing** - FIXED ✅
+- [x] **CRITICAL: Hardcoded values in logic** - FIXED ✅
+- [x] **CRITICAL: Monolithic God Files** - FIXED ✅
 
 ## 🎯 Demo Goals
 
@@ -157,8 +176,9 @@ For the hackathon demo, we need:
 - Agent personalities are well-defined and ready
 - Mock data allows for rapid development
 - LangChain integration provides sophisticated AI behavior
-- **CRITICAL FIXES COMPLETED**: Race conditions, security vulnerabilities, and configuration issues resolved
+- **CRITICAL FIXES COMPLETED**: Race conditions, security vulnerabilities, configuration issues, and architectural improvements resolved
+- **ARCHITECTURE IMPROVED**: Code is now modular, testable, and maintainable with proper separation of concerns
 
 ---
 
-**Current Status**: ✅ Foundation complete, ✅ Core game engine complete, ✅ Critical security fixes complete, ✅ Python 3.12.3 configured, 🚧 Code cleanup next 
+**Current Status**: ✅ Foundation complete, ✅ Core game engine complete, ✅ Critical security fixes complete, ✅ Python 3.12.3 configured, ✅ Code architecture refactored, 🚧 Testing and optimization next 
