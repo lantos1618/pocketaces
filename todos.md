@@ -18,6 +18,8 @@
     - [x] `ActionButtons` - Handles player action buttons
     - [x] `GameUI` - Main orchestrator component
     - [x] `POKER_STYLES` - Extracted CSS into separate module
+  - [x] **FIXED: NiceGUI Compatibility Issue** - Downgraded to NiceGUI 1.4.21 for FastAPI 0.109.2 compatibility
+  - [x] **UPGRADED: All Packages to Latest Versions** - FastAPI 0.115.13, NiceGUI 2.20.0, Uvicorn 0.34.3, Pydantic 2.11.7
 
 - [ ] **VOICE INTEGRATION - YOUR KILLER FEATURE**
   - [ ] Test ElevenLabs API connection

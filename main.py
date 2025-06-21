@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
+from fastapi.responses import RedirectResponse
 
 # Import routers
 from app.api.routes import rooms, games, agents, websockets
@@ -46,7 +47,7 @@ class Config:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 
     # API Keys
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
     ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
     # Game Settings
@@ -68,16 +69,16 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 Starting Pocket Aces Server...")
 
-    # Initialize agent manager with OpenAI
-    if Config.OPENAI_API_KEY:
+    # Initialize agent manager with Mistral
+    if Config.MISTRAL_API_KEY:
         try:
-            await agent_manager.initialize_llm(Config.OPENAI_API_KEY)
-            print("✅ LangChain initialized with OpenAI")
+            await agent_manager.initialize_llm(Config.MISTRAL_API_KEY)
+            print("✅ LangChain initialized with Mistral")
         except Exception as e:
-            print(f"⚠️  Failed to initialize OpenAI: {e}")
+            print(f"⚠️  Failed to initialize Mistral: {e}")
             print("🤖 Agents will use rule-based decision making")
     else:
-        print("⚠️  No OpenAI API key provided - using rule-based agents")
+        print("⚠️  No Mistral API key provided - using rule-based agents")
 
     # Create default rooms
     await _create_default_rooms()
@@ -139,16 +140,23 @@ app.include_router(games.router)
 app.include_router(agents.router)
 app.include_router(websockets.router)
 
+
+# Health check (must be before frontend to avoid NiceGUI interception)
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+
+# Redirect root to UI
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/ui")
+
+
 # Initialize frontend if available
 if FRONTEND_AVAILABLE:
     create_poker_ui(app)
     print("✅ Frontend initialized")
-
-
-# Health check
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 
 if __name__ == "__main__":

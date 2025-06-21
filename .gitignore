@@ -103,6 +103,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
 .venv
 env/
 venv/
@@ -175,3 +176,4 @@ yarn-error.log*
 # Configuration files with secrets
 config.json
 secrets.json 
+.env.local

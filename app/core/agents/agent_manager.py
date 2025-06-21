@@ -3,7 +3,7 @@ import asyncio
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 
-from langchain_openai import ChatOpenAI
+from langchain_mistralai import ChatMistralAI
 from langchain.schema import HumanMessage, SystemMessage
 from langchain.memory import ConversationBufferMemory
 
@@ -34,7 +34,7 @@ class AgentManager:
 
     def __init__(self) -> None:
         """Initialize the agent manager."""
-        self.llm: Optional[ChatOpenAI] = None
+        self.llm: Optional[ChatMistralAI] = None
         self.agent_memories: Dict[str, Any] = {}
 
         # Initialize specialized services
@@ -44,10 +44,12 @@ class AgentManager:
         self.voice_generator = VoiceLineGenerator()
 
     async def initialize_llm(self, api_key: str) -> None:
-        """Initialize LangChain LLM with OpenAI."""
+        """Initialize LangChain LLM with Mistral."""
         try:
-            self.llm = ChatOpenAI(model="gpt-4", temperature=0.7, api_key=api_key)
-            print("LangChain LLM initialized successfully")
+            self.llm = ChatMistralAI(
+                model="mistral-large-latest", temperature=0.7, api_key=api_key
+            )
+            print("LangChain LLM initialized successfully with Mistral")
         except Exception as e:
             print(f"Failed to initialize LangChain LLM: {e}")
             self.llm = None

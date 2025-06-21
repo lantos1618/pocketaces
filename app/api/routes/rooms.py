@@ -2,6 +2,7 @@ from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException
 from ...store.game_store import game_store
 from ...models.game_models import GameRoom
+from ...models.mock_data import MOCK_AGENTS
 
 router = APIRouter(prefix="/api/rooms", tags=["Rooms"])
 
@@ -75,10 +76,17 @@ async def add_agent_to_room(room_id: str, agent_id: str) -> Dict[str, Any]:
     """Add an AI agent to a room"""
     from ...models.game_models import Player
 
-    # Get agent personality
-    agent_personality = game_store.get_agent_personality(agent_id)
+    # Find agent personality from mock data
+    agent_personality = next(
+        (agent for agent in MOCK_AGENTS if agent.agent_id == agent_id), None
+    )
+
     if not agent_personality:
-        raise HTTPException(status_code=404, detail="Agent not found")
+        # If not in mock data, check the store as a fallback
+        agent_personality = game_store.get_agent_personality(agent_id)
+
+    if not agent_personality:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
 
     # Create agent player
     agent_player = Player(
