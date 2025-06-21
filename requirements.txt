@@ -1,0 +1,35 @@
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+websockets==12.0
+
+# Database
+sqlalchemy==2.0.23
+# drizzle-orm==0.29.0  # Will add later when needed
+
+# AI and Language Models
+langchain==0.1.0
+langchain-openai==0.0.5
+openai
+
+# Voice Synthesis
+elevenlabs==0.2.26
+
+# Data Validation
+pydantic==2.5.0
+
+# Async Support
+aiofiles==23.2.1
+
+# Development and Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
+
+# Utilities
+python-dotenv==1.0.0
+httpx==0.25.2
+
+# Optional: For production
+gunicorn==21.2.0 
