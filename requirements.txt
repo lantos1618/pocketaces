@@ -18,6 +18,9 @@ elevenlabs==0.2.26
 # Data Validation
 pydantic==2.5.0
 
+# Authentication
+PyJWT==2.8.0
+
 # Async Support
 aiofiles==23.2.1
 

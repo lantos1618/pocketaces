@@ -63,8 +63,25 @@ class GameStore:
         # Event history
         self.game_events: List[GameEvent] = []
         
+        # Concurrency control
+        self._game_locks: Dict[str, asyncio.Lock] = {}
+        self._room_locks: Dict[str, asyncio.Lock] = {}
+        self._store_lock = asyncio.Lock()
+        
         # Initialize with mock data
         self._initialize_mock_data()
+    
+    def _get_game_lock(self, game_id: str) -> asyncio.Lock:
+        """Get or create a lock for a specific game."""
+        if game_id not in self._game_locks:
+            self._game_locks[game_id] = asyncio.Lock()
+        return self._game_locks[game_id]
+    
+    def _get_room_lock(self, room_id: str) -> asyncio.Lock:
+        """Get or create a lock for a specific room."""
+        if room_id not in self._room_locks:
+            self._room_locks[room_id] = asyncio.Lock()
+        return self._room_locks[room_id]
     
     def _initialize_mock_data(self) -> None:
         """Initialize store with mock data."""
@@ -82,15 +99,16 @@ class GameStore:
             self.agent_memories[memory.agent_id].append(memory)
     
     # Room Management
-    def create_room(self, name: str, max_players: int = 3, settings: Optional[Dict[str, Any]] = None) -> GameRoom:
+    async def create_room(self, name: str, max_players: int = 3, settings: Optional[Dict[str, Any]] = None) -> GameRoom:
         """Create a new game room."""
-        room = GameRoom(
-            name=name,
-            max_players=max_players,
-            settings=settings or {}
-        )
-        self.rooms[room.room_id] = room
-        return room
+        async with self._store_lock:
+            room = GameRoom(
+                name=name,
+                max_players=max_players,
+                settings=settings or {}
+            )
+            self.rooms[room.room_id] = room
+            return room
     
     def get_room(self, room_id: str) -> Optional[GameRoom]:
         """Get room by ID."""
@@ -100,34 +118,36 @@ class GameStore:
         """Get all rooms."""
         return list(self.rooms.values())
     
-    def delete_room(self, room_id: str) -> bool:
+    async def delete_room(self, room_id: str) -> bool:
         """Delete a room."""
-        if room_id in self.rooms:
-            del self.rooms[room_id]
-            return True
-        return False
+        async with self._get_room_lock(room_id):
+            if room_id in self.rooms:
+                del self.rooms[room_id]
+                return True
+            return False
     
     # Game Management
-    def create_game(self, room_id: str) -> Optional[GameState]:
+    async def create_game(self, room_id: str) -> Optional[GameState]:
         """Create a new game in a room."""
-        room = self.get_room(room_id)
-        if not room or not room.can_start_game():
-            return None
-        
-        game = GameState(
-            room_id=room_id,
-            players=room.players.copy(),
-            small_blind=room.settings.get("small_blind", 10),
-            big_blind=room.settings.get("big_blind", 20)
-        )
-        
-        self.active_games[game.game_id] = game
-        room.current_game = game
-        
-        # Record event
-        self._record_event("game_created", game.game_id, room_id)
-        
-        return game
+        async with self._get_room_lock(room_id):
+            room = self.get_room(room_id)
+            if not room or not room.can_start_game():
+                return None
+            
+            game = GameState(
+                room_id=room_id,
+                players=room.players.copy(),
+                small_blind=room.settings.get("small_blind", 10),
+                big_blind=room.settings.get("big_blind", 20)
+            )
+            
+            self.active_games[game.game_id] = game
+            room.current_game = game
+            
+            # Record event
+            await self._record_event("game_created", game.game_id, room_id)
+            
+            return game
     
     def get_game(self, game_id: str) -> Optional[GameState]:
         """Get game by ID."""
@@ -137,72 +157,75 @@ class GameStore:
         """Get all active games."""
         return list(self.active_games.values())
     
-    def end_game(self, game_id: str, winners: List[str], winning_hand: Optional[HandRank] = None) -> Optional[GameResult]:
+    async def end_game(self, game_id: str, winners: List[str], winning_hand: Optional[HandRank] = None) -> Optional[GameResult]:
         """End a game and create result."""
-        game = self.get_game(game_id)
-        if not game:
-            return None
-        
-        # Calculate results
-        player_results: Dict[str, Dict[str, Any]] = {}
-        for player in game.players:
-            profit = player.chips - 1000  # Assuming 1000 starting chips
-            player_results[player.id] = {
-                "profit": profit,
-                "final_chips": player.chips,
-                "actions": len([a for a in game.action_history if a.player_id == player.id])
-            }
-        
-        # Create result
-        result = GameResult(
-            game_id=game_id,
-            room_id=game.room_id,
-            winners=winners,
-            winning_hand=winning_hand,
-            pot=game.pot,
-            player_results=player_results,
-            duration=(datetime.now() - game.created_at).total_seconds()
-        )
-        
-        # Store result
-        self.game_history.append(result)
-        
-        # Update room
-        room = self.get_room(game.room_id)
-        if room:
-            room.game_history.append(game)
-            room.current_game = None
-        
-        # Remove from active games
-        del self.active_games[game_id]
-        
-        # Record event
-        self._record_event("game_ended", game_id, game.room_id, data={"winners": winners})
-        
-        return result
+        async with self._get_game_lock(game_id):
+            game = self.get_game(game_id)
+            if not game:
+                return None
+            
+            # Calculate results
+            player_results: Dict[str, Dict[str, Any]] = {}
+            for player in game.players:
+                profit = player.chips - 1000  # Assuming 1000 starting chips
+                player_results[player.id] = {
+                    "profit": profit,
+                    "final_chips": player.chips,
+                    "actions": len([a for a in game.action_history if a.player_id == player.id])
+                }
+            
+            # Create result
+            result = GameResult(
+                game_id=game_id,
+                room_id=game.room_id,
+                winners=winners,
+                winning_hand=winning_hand,
+                pot=game.pot,
+                player_results=player_results,
+                duration=(datetime.now() - game.created_at).total_seconds()
+            )
+            
+            # Store result
+            self.game_history.append(result)
+            
+            # Update room
+            room = self.get_room(game.room_id)
+            if room:
+                room.game_history.append(game)
+                room.current_game = None
+            
+            # Remove from active games
+            del self.active_games[game_id]
+            
+            # Record event
+            await self._record_event("game_ended", game_id, game.room_id, data={"winners": winners})
+            
+            return result
     
     # Player Management
-    def add_player_to_room(self, room_id: str, player: Player) -> bool:
+    async def add_player_to_room(self, room_id: str, player: Player) -> bool:
         """Add player to a room."""
-        room = self.get_room(room_id)
-        if not room:
-            return False
-        
-        success = room.add_player(player)
-        if success:
-            self._record_event("player_joined", None, room_id, player.id)
-        return success
+        async with self._get_room_lock(room_id):
+            room = self.get_room(room_id)
+            if not room:
+                return False
+            
+            success = room.add_player(player)
+            if success:
+                await self._record_event("player_joined", None, room_id, player.id)
+            return success
     
-    def remove_player_from_room(self, room_id: str, player_id: str) -> bool:
+    async def remove_player_from_room(self, room_id: str, player_id: str) -> bool:
         """Remove player from a room."""
-        room = self.get_room(room_id)
-        if not room:
-            return False
-        
-        success = room.remove_player(player_id)
-        if success:
-            self._record_event("player_left", None, room_id, player_id)
-        return success
+        async with self._get_room_lock(room_id):
+            room = self.get_room(room_id)
+            if not room:
+                return False
+            
+            success = room.remove_player(player_id)
+            if success:
+                await self._record_event("player_left", None, room_id, player_id)
+            return success
     
     def get_player_session(self, player_id: str) -> PlayerSession:
         """Get or create player session."""
@@ -218,7 +241,7 @@ class GameStore:
     
     # Agent Management
     def get_agent_personality(self, agent_id: str) -> Optional[AgentPersonality]:
-        """Get agent personality by ID."""
+        """Get agent personality."""
         return self.available_agents.get(agent_id)
     
     def get_all_agents(self) -> List[AgentPersonality]:
@@ -249,85 +272,87 @@ class GameStore:
         relevant = [m for m in memories if m.opponent_id == opponent_id]
         return sorted(relevant, key=lambda x: x.importance, reverse=True)[:limit]
     
-    # Game Actions
-    def make_player_action(self, game_id: str, player_id: str, action_type: str, amount: Optional[int] = None) -> bool:
-        """Make a player action in a game."""
-        game = self.get_game(game_id)
-        if not game:
-            return False
-        
-        player = game.get_player_by_id(player_id)
-        if not player or player.status != "active":
-            return False
-        
-        # Create action
-        from ..models.game_models import PlayerAction, ActionType, PlayerStatus
-        action = PlayerAction(
-            player_id=player_id,
-            action_type=ActionType(action_type),
-            amount=amount
-        )
-        
-        # Execute action based on type
-        if action_type == "fold":
-            player.status = PlayerStatus.FOLDED
-        elif action_type == "call":
-            call_amount = game.current_bet - player.current_bet
-            if player.chips >= call_amount:
-                player.chips -= call_amount
-                player.current_bet = game.current_bet
-                game.pot += call_amount
-            else:
+    # Game Actions - CRITICAL FIX: Added proper locking
+    async def make_player_action(self, game_id: str, player_id: str, action_type: str, amount: Optional[int] = None) -> bool:
+        """Make a player action in a game with proper concurrency control."""
+        async with self._get_game_lock(game_id):
+            game = self.get_game(game_id)
+            if not game:
                 return False
-        elif action_type == "raise":
-            if amount is None or amount < game.min_raise:
+            
+            player = game.get_player_by_id(player_id)
+            if not player or player.status != "active":
                 return False
-            total_needed = game.current_bet - player.current_bet + amount
-            if player.chips >= total_needed:
-                player.chips -= total_needed
-                player.current_bet = game.current_bet + amount
-                game.pot += total_needed
-                game.current_bet = player.current_bet
-                game.min_raise = amount
-            else:
-                return False
-        elif action_type == "all_in":
-            all_in_amount = player.chips
-            player.current_bet += all_in_amount
-            game.pot += all_in_amount
-            player.chips = 0
-            player.status = PlayerStatus.ALL_IN
-            if player.current_bet > game.current_bet:
-                game.current_bet = player.current_bet
-        
-        # Update game state
-        player.last_action = action
-        game.last_action = action
-        game.action_history.append(action)
-        
-        # Move to next player
-        game.active_player_index = (game.active_player_index + 1) % len(game.players)
-        
-        # Record event
-        self._record_event("action_made", game_id, game.room_id, player_id, {
-            "action_type": action_type,
-            "amount": amount
-        })
-        
-        return True
+            
+            # Create action
+            from ..models.game_models import PlayerAction, ActionType, PlayerStatus
+            action = PlayerAction(
+                player_id=player_id,
+                action_type=ActionType(action_type),
+                amount=amount
+            )
+            
+            # Execute action based on type
+            if action_type == "fold":
+                player.status = PlayerStatus.FOLDED
+            elif action_type == "call":
+                call_amount = game.current_bet - player.current_bet
+                if player.chips >= call_amount:
+                    player.chips -= call_amount
+                    player.current_bet = game.current_bet
+                    game.pot += call_amount
+                else:
+                    return False
+            elif action_type == "raise":
+                if amount is None or amount < game.min_raise:
+                    return False
+                total_needed = game.current_bet - player.current_bet + amount
+                if player.chips >= total_needed:
+                    player.chips -= total_needed
+                    player.current_bet = game.current_bet + amount
+                    game.pot += total_needed
+                    game.current_bet = player.current_bet
+                    game.min_raise = amount
+                else:
+                    return False
+            elif action_type == "all_in":
+                all_in_amount = player.chips
+                player.current_bet += all_in_amount
+                game.pot += all_in_amount
+                player.chips = 0
+                player.status = PlayerStatus.ALL_IN
+                if player.current_bet > game.current_bet:
+                    game.current_bet = player.current_bet
+            
+            # Update game state
+            player.last_action = action
+            game.last_action = action
+            game.action_history.append(action)
+            
+            # Move to next player
+            game.active_player_index = (game.active_player_index + 1) % len(game.players)
+            
+            # Record event
+            await self._record_event("action_made", game_id, game.room_id, player_id, {
+                "action_type": action_type,
+                "amount": amount
+            })
+            
+            return True
     
     # Event Management
-    def _record_event(self, event_type: str, game_id: Optional[str] = None, room_id: Optional[str] = None, 
+    async def _record_event(self, event_type: str, game_id: Optional[str] = None, room_id: Optional[str] = None, 
                      player_id: Optional[str] = None, data: Optional[Dict[str, Any]] = None) -> None:
         """Record a game event."""
-        event = GameEvent(
-            event_type=event_type,
-            game_id=game_id or "",
-            room_id=room_id or "",
-            player_id=player_id,
-            data=data or {}
-        )
-        self.game_events.append(event)
+        async with self._store_lock:
+            event = GameEvent(
+                event_type=event_type,
+                game_id=game_id or "",
+                room_id=room_id or "",
+                player_id=player_id,
+                data=data or {}
+            )
+            self.game_events.append(event)
     
     def get_game_events(self, game_id: Optional[str] = None, room_id: Optional[str] = None, limit: int = 100) -> List[GameEvent]:
         """Get game events with optional filtering."""
@@ -402,21 +427,22 @@ class GameStore:
         return rooms_info
     
     # Maintenance
-    def cleanup_inactive_rooms(self, max_age_hours: int = 24) -> int:
+    async def cleanup_inactive_rooms(self, max_age_hours: int = 24) -> int:
         """Clean up inactive rooms older than specified hours."""
-        cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
-        rooms_to_delete = []
-        
-        for room_id, room in self.rooms.items():
-            if (room.created_at < cutoff_time and 
-                not room.players and 
-                not room.current_game):
-                rooms_to_delete.append(room_id)
-        
-        for room_id in rooms_to_delete:
-            del self.rooms[room_id]
-        
-        return len(rooms_to_delete)
+        async with self._store_lock:
+            cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
+            rooms_to_delete = []
+            
+            for room_id, room in self.rooms.items():
+                if (room.created_at < cutoff_time and 
+                    not room.players and 
+                    not room.current_game):
+                    rooms_to_delete.append(room_id)
+            
+            for room_id in rooms_to_delete:
+                del self.rooms[room_id]
+            
+            return len(rooms_to_delete)
 
 # Global game store instance
 game_store = GameStore() 
